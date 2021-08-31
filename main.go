@@ -12,14 +12,27 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// https://goerli.etherscan.io/block/5410648
-const blockNum = 5410648
+var (
+	// Default Metamask Infura url
+	nodeUrl = flag.String("u", "wss://goerli.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161", "Ethereum node URL")
+	// Default Goerli block to check https://goerli.etherscan.io/block/5410648
+	blockNum  = flag.Int64("n", 5410648, "block number to check")
+	blockHash = HashValue{
+		Hash: common.HexToHash("0xb85f4e8338828821a821217fbc8c501b21b8752d71b77fe0dae35783d74423d3"),
+	}
+)
 
-var blockHash = common.HexToHash("0xb85f4e8338828821a821217fbc8c501b21b8752d71b77fe0dae35783d74423d3")
+type HashValue struct {
+	common.Hash
+}
 
-var nodeUrl = flag.String("n", "", "Ethereum node URL")
+func (v *HashValue) Set(s string) error {
+	v.Hash = common.HexToHash(s)
+	return nil
+}
 
 func main() {
+	flag.Var(&blockHash, "h", "block hash to check")
 	flag.Parse()
 	if nodeUrl == nil || *nodeUrl == "" {
 		log.Fatal("Node URL must be provided.")
@@ -31,12 +44,12 @@ func main() {
 	cl, err := ethclient.DialContext(ctx, *nodeUrl)
 	failOnError("Dialing node", err)
 
-	byNum, err := cl.HeaderByNumber(ctx, big.NewInt(blockNum))
+	byNum, err := cl.HeaderByNumber(ctx, big.NewInt(*blockNum))
 	failOnError("HeaderByNumber", err)
 	checkHeader("HeaderByNumber", byNum)
 	printHeader(byNum)
 
-	byHash, err := cl.HeaderByHash(ctx, blockHash)
+	byHash, err := cl.HeaderByHash(ctx, blockHash.Hash)
 	failOnError("HeaderByHash", err)
 	checkHeader("HeaderByHash", byHash)
 	printHeader(byHash)
@@ -65,11 +78,11 @@ func failOnError(desc string, err error) {
 }
 
 func checkHeader(desc string, h *types.Header) {
-	if num := h.Number.Int64(); num != blockNum {
+	if num := h.Number.Int64(); num != *blockNum {
 		log.Printf("🐛 %s Number mismatch, expected %d, got %d",
 			desc, blockNum, num)
 	}
-	if hash := h.Hash(); hash != blockHash {
+	if hash := h.Hash(); hash != blockHash.Hash {
 		log.Printf("🐛 %s Hash mismatch, expected %s, got %s",
 			desc, blockHash.String(), hash.String())
 	}
