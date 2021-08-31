@@ -47,7 +47,14 @@ func main() {
 
 	_, err = cl.HeaderByHash(ctx, byHash.Hash())
 	if err != nil {
-		log.Printf("(Expected) error getting header with wrong hash: %v", err)
+		log.Printf("🐛 (Expected) error getting header again with own hash: %v", err)
+	}
+
+	nextHeader, err := cl.HeaderByNumber(ctx, big.NewInt(*blockNum+1))
+	failOnError("HeaderByNumber+1", err)
+	if nextHeader.ParentHash != byNum.Hash() {
+		log.Printf("🐛 ParentHash mismatch, expected %s, got %s",
+			nextHeader.ParentHash.String(), byNum.Hash())
 	}
 }
 
